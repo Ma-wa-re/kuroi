@@ -58,10 +58,10 @@ class Radio:
 
             while True:
                 self.play_next_song.clear()
-                self.current_id = choice(playlist)
+                self.current_id = choice(self.playlist)
                 self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next)
                 await bot.change_presence(game=discord.Game(name=self.player.title))
-                self.player.volume = 0.6
+                self.player.volume = self.config['volume']
                 self.player.start()
                 await self.play_next_song.wait()
         except:
@@ -77,7 +77,7 @@ class Radio:
             self.skip_count += 1
             self.voters.append(ctx.message.author)
             await self.bot.say(f"{self.skip_count}/{self.config['skip_count']} users have voted to skip!")
-            if self.skip_count >= int(self.config['skip_count']):
+            if self.skip_count >= self.config['skip_count']:
                 await self.bot.say("Skipping song!")
                 self.player.stop()
                 self.skip_count = 0
