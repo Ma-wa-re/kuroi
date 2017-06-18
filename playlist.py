@@ -44,7 +44,7 @@ async def on_message(message):
                 await play_next_song.wait()
         except:
             pass
-    if 'youtube' in message.content and message.channel.id == "325877524590755840":
+    if 'youtube' in message.content and message.channel.id == "280778849615216640":
         try:
             url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
             param = re.search("(\?|\&)([^=]+)\=([^&]+)", url)[0]
@@ -56,7 +56,7 @@ async def on_message(message):
         except Exception as e:
             print(e)
     if message.content.startswith('%playing'):
-        if video is not None and message.channel.id != "325877524590755840":
+        if video is not None and message.channel.id != "280778849615216640":
             await client.send_message(message.channel, f"https://www.youtube.com/watch?v={video}")
             
 
