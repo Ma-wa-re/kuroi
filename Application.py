@@ -91,7 +91,7 @@ class Radio:
     async def playing(self, ctx):
         """Retrieves the currently playing song, if any."""
         if self.current_id is not None:
-            await self.bot.say(f"https://www.youtube.com/watch?v={current_id}")
+            await self.bot.say(f"https://www.youtube.com/watch?v={self.current_id}")
 
 # Initalize
 with open('config.json', 'r') as f:
