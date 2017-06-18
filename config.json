@@ -1,0 +1,9 @@
+{
+    "token": "TOKEN GOES HERE",
+    "description": "Radio",
+    "prefix": "%",
+    "skip_count": "3",
+    "volume": ".5",
+    "playlist_path": "playlist.txt",
+    "music_channel": "325877524590755840"
+}
