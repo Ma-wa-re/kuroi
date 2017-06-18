@@ -33,7 +33,7 @@ class Radio:
                     param = param[3:]
                     print(f"Appended video: {param}")
                     self.playlist.append(param)
-                    with open(config['playlist_path'], "a+") as data:
+                    with open(self.config['playlist_path'], "a+") as data:
                         data.write(param + '\n') 
             except Exception as e:
                 print(e)
@@ -63,7 +63,7 @@ class Radio:
                 self.skip_count = 0
                 self.voters = []
                 self.current_id = choice(self.playlist)
-                self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next)
+                self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
                 await bot.change_presence(game=discord.Game(name=self.player.title))
                 self.player.volume = self.config['volume']
                 self.player.start()
