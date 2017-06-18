@@ -23,9 +23,6 @@ class Radio:
         else:
             self.playlist = []
 
-    async def on_ready(self):
-        print(f"{self.config['token']}")
-
     async def on_message(self, message):
         if 'youtube' in message.content and message.channel.id == self.config["music_channel"]:
             try:
@@ -42,10 +39,13 @@ class Radio:
         self.bot.process_commands(message)
 
     def toggle_next(self):
-        self.bot.loop.call_soon_threadsafe(self.play_next_song.set)        
+        self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
     @commands.command(pass_context=True, no_pm=True)
     async def summon(self, ctx):
+        '''
+        Summons the bot to your current voice channel
+        '''
         try:
             if ctx.message.author.voice_channel is None:
                 return False
@@ -69,7 +69,7 @@ class Radio:
 
     @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
-        """Retrieves the currently playing song, if any."""
+        """Skips the currently playing song, if any."""
         if self.player is not None:
             if ctx.message.author in self.voters:
                 await self.bot.say("You have already voted!")
