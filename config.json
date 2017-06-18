@@ -2,7 +2,7 @@
     "token": "bot token here",
     "description": "Music bot for the Programming Discord",
     "prefix": "%",
-    "skip_count": 3,
+    "skip_percentage": 0.5,
     "volume": 0.5,
     "playlist_path": "playlist.txt",
     "music_channel": "280778849615216640"

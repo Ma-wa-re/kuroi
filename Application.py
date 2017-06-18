@@ -15,6 +15,7 @@ class Radio:
         self.voice = None
         self.player = None
         self.current_id = None
+        self.voice_channel = None
         self.skip_count = 0
         self.voters = []
         self.play_next_song = asyncio.Event()
@@ -50,14 +51,17 @@ class Radio:
             if ctx.message.author.voice_channel is None:
                 return False
             
+            self.voice_channel = ctx.message.author.voice_channel
             if self.voice is None:
-                self.voice = await bot.join_voice_channel(ctx.message.author.voice_channel)
+                self.voice = await bot.join_voice_channel(self.voice_channel)
             else:
-                await self.voice.move_to(ctx.message.author.voice_channel)
+                await self.voice.move_to(self.voice_channel)
                 return False
 
             while True:
                 self.play_next_song.clear()
+                self.skip_count = 0
+                self.voters = []
                 self.current_id = choice(self.playlist)
                 self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next)
                 await bot.change_presence(game=discord.Game(name=self.player.title))
@@ -71,13 +75,20 @@ class Radio:
     async def skip(self, ctx):
         """Skips the currently playing song, if any."""
         if self.player is not None:
+            if ctx.message.author not in self.voice_channel.voice_members:
+                await self.bot.say("You are not in the voice channel!")
+                return
             if ctx.message.author in self.voters:
                 await self.bot.say("You have already voted!")
                 return
             self.skip_count += 1
             self.voters.append(ctx.message.author)
-            await self.bot.say(f"{self.skip_count}/{self.config['skip_count']} users have voted to skip!")
-            if self.skip_count >= self.config['skip_count']:
+
+            current_user_amount = len(self.voice_channel.voice_members)
+            required_to_skip = int(current_user_amount * self.config['skip_percentage'])
+
+            await self.bot.say(f"{self.skip_count}/{required_to_skip} users have voted to skip!")
+            if self.skip_count >= required_to_skip:
                 await self.bot.say("Skipping song!")
                 self.player.stop()
                 self.skip_count = 0
@@ -102,6 +113,6 @@ with open(config['playlist_path'], "r") as data:
     for video in data:
         playlist.append(video)
 
-bot = commands.Bot(command_prefix=config['prefix'], description=config['description'])
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(config['prefix']), description=config['description'])
 bot.add_cog(Radio(bot, config, playlist))
 bot.run(config['token'])
