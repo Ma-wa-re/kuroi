@@ -46,6 +46,8 @@ async def on_message(message):
                 play_next_song.clear()
                 video = choice(playlist)
                 player = await voice.create_ytdl_player(video, after=toggle_next)
+                player.volume = 0.6
+                await client.change_presence(game=discord.Game(name=player.title))
                 player.start()
                 await play_next_song.wait()
         except:
@@ -65,5 +67,8 @@ async def on_message(message):
     elif message.content.startswith('%playing'):
         if video is not None and message.channel.id != "280778849615216640":
             await client.send_message(message.channel, f"https://www.youtube.com/watch?v={video}")
+    elif not message.author.bot:
+        if message.content.startswith('%help'):
+            await client.send_message(message.channel, '%help - displays this message \n%playing - shows the currently playing song \n%summon - bring to your voice channel')
 
 client.run("")
