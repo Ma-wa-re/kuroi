@@ -158,7 +158,16 @@ class Radio:
     async def playing(self, ctx):
         """Retrieves the currently playing song, if any."""
         if self.current_id is not None:
-            await self.bot.say(f"https://www.youtube.com/watch?v={self.current_id}")
+
+            title = self.player.title
+            url = self.player.url
+            mins, seconds = divmod(self.player.duration)
+            desc = (f'Duration: {mins}:{seconds}\n'
+                    f'Views: {self.player.views}\n'
+                    f'Uploader: {self.player.uploader}')
+            embed = discord.Embed(type='rich', title=title, url=url, description=desc)
+            embed.set_thumbnail(url=f'https://img.youtube.com/vi/{self.current_id}>/0.jpg')
+            await self.bot.say(embed=embed)
 
 
 # Initalize
