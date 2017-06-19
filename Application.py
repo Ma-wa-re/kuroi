@@ -48,7 +48,7 @@ class Radio:
     async def volume(self, ctx, vol : int=None):
         ''' Set the volume of the radio, any value between 0 and 100 '''
         if vol is None:
-            await self.bot.say(f"Volume is {self.player.volume * .01}")
+            await self.bot.say(f"Volume is {self.vol*100}")
 
         elif vol >= 0 and vol <= 100 and not ctx.message.author.bot:
             self.vol = vol * .01
