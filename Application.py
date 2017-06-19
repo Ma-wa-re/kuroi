@@ -35,7 +35,6 @@ class Radio:
                 if param[0:2] != "v=":
                     param = "".join(("v=", param.split("v=")[1]))
                 if 'list' not in param and param[2:] not in playlist:
-                    print(f"Appended video id: {param[2:]}")
                     self.playlist.append(param[2:])
                     with open(self.config['playlist_path'], "a") as data:
                         data.write(param + '\n') 
