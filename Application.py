@@ -45,14 +45,16 @@ class Radio:
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def volume(self, ctx, vol : int):
+    async def volume(self, ctx, vol : int=None):
         ''' Set the volume of the radio, any value between 0 and 100 '''
-        if vol >= 0 and vol <= 100:
+        if vol is None:
+            await self.bot.say(f"Volume is {self.player.volume * .01}")
+
+        elif vol >= 0 and vol <= 100 and not ctx.message.author.bot:
             self.vol = vol * .01
             if self.player is not None:
                 self.player.volume = self.vol
                 await self.bot.say(f"Set player volume to {vol}%")
-
 
     @commands.command(pass_context=True, no_pm=True)
     async def summon(self, ctx):
@@ -60,11 +62,11 @@ class Radio:
         Summons the bot to your current voice channel
         '''
         try:
-            if ctx.message.author.voice_channel == None or ctx.message.author.bot == True:
+            if ctx.message.author.voice_channel is None or ctx.message.author.bot:
                 return False
             
             self.voice_channel = ctx.message.author.voice_channel
-            if self.voice == None:
+            if self.voice is None:
                 self.voice = await bot.join_voice_channel(self.voice_channel)
             else:
                 await self.voice.move_to(self.voice_channel)
