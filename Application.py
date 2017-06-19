@@ -2,7 +2,7 @@ import re
 import discord
 import json
 from discord.ext import commands
-from random import choice
+from random import choice, shuffle
 import asyncio
 
 if not discord.opus.is_loaded():
@@ -23,6 +23,7 @@ class Radio:
             self.playlist = playlist
         else:
             self.playlist = []
+        self.stack = []
 
     async def on_message(self, message):
         if 'youtube' in message.content and message.channel.id == self.config["music_channel"]:
@@ -62,7 +63,12 @@ class Radio:
                 self.play_next_song.clear()
                 self.skip_count = 0
                 self.voters = []
-                self.current_id = choice(self.playlist)
+                self.current_id = self.playlist.pop()
+                self.stack.append(self.current_id)
+                if len(self.playlist) == 0:
+                    self.playlist = self.stack
+                    shuffle(self.playlist)
+                    self.stack = []
                 self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
                 await bot.change_presence(game=discord.Game(name=self.player.title))
                 self.player.volume = self.config['volume']
@@ -85,7 +91,7 @@ class Radio:
             self.voters.append(ctx.message.author)
 
             current_user_amount = len(self.voice_channel.voice_members)
-            required_to_skip = int(current_user_amount * self.config['skip_percentage'])
+            required_to_skip = int((current_user_amount  + 1)* self.config['skip_percentage'])
 
             await self.bot.say(f"{self.skip_count}/{required_to_skip} users have voted to skip!")
             if self.skip_count >= required_to_skip:
@@ -112,6 +118,8 @@ playlist = []
 with open(config['playlist_path'], "r") as data:
     for video in data:
         playlist.append(video)
+
+shuffle(playlist)
 
 bot = commands.Bot(command_prefix=commands.when_mentioned_or(config['prefix']), description=config['description'])
 bot.add_cog(Radio(bot, config, playlist))
