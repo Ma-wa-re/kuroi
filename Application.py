@@ -32,6 +32,8 @@ class Radio:
             try:
                 url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
                 param = urlparse(url).query
+                if param[0:2] != "v=":
+                    param = "".join(("v=", param.split("v=")[1]))
                 if 'list' not in param and param[2:] not in playlist:
                     print(f"Appended video id: {param[2:]}")
                     self.playlist.append(param[2:])
