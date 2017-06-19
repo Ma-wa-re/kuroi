@@ -72,7 +72,7 @@ class Radio:
                 await self.voice.move_to(self.voice_channel)
                 return False
 
-            while True:
+            while len(self.voice_channel.voice_members) > 1:
                 self.play_next_song.clear()
                 self.skip_count = 0
                 self.voters = []
@@ -87,6 +87,13 @@ class Radio:
                 self.player.volume = self.vol
                 self.player.start()
                 await self.play_next_song.wait()
+            
+            self.voice = None
+            self.player = None
+            self.current_id = None
+            self.voice_channel = None
+            self.skip_count = 0
+            self.voters = []
         except:
             pass    
 
