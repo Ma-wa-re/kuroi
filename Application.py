@@ -27,6 +27,9 @@ class Radio:
             self.playlist = []
         self.stack = []
 
+    async def on_ready(self):
+        await self.bot.change_presence(game=discord.Game(name="%help"))
+
     async def on_message(self, message):
         if 'youtube' in message.content and message.channel.id == self.config["music_channel"] and not message.author.bot:
             try:
@@ -49,7 +52,7 @@ class Radio:
     async def volume(self, ctx, vol : int=None):
         ''' Set the volume of the radio, any value between 0 and 100 '''
         if vol is None:
-            await self.bot.say(f"Volume is {self.vol*100}")
+            await self.bot.say(f"Volume is {self.vol*100}%")
 
         elif vol >= 0 and vol <= 100 and not ctx.message.author.bot:
             self.vol = vol * .01
@@ -68,7 +71,7 @@ class Radio:
             
             self.voice_channel = ctx.message.author.voice_channel
             if self.voice is None:
-                self.voice = await bot.join_voice_channel(self.voice_channel)
+                self.voice = await self.bot.join_voice_channel(self.voice_channel)
             else:
                 await self.voice.move_to(self.voice_channel)
                 return False
@@ -84,11 +87,14 @@ class Radio:
                     shuffle(self.playlist)
                     self.stack = []
                 self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
-                await bot.change_presence(game=discord.Game(name=self.player.title))
+                await self.bot.change_presence(game=discord.Game(name=self.player.title))
                 self.player.volume = self.vol
                 self.player.start()
                 await self.play_next_song.wait()
             
+            await self.voice.disconnect()
+            await self.bot.change_presence(game=discord.Game(name="%help"))
+
             self.voice = None
             self.player = None
             self.current_id = None
@@ -96,7 +102,7 @@ class Radio:
             self.skip_count = 0
             self.voters = []
         except:
-            pass    
+            pass
 
     @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
