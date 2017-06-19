@@ -51,6 +51,13 @@ class Radio:
     @commands.command(pass_context=True, no_pm=True)
     async def volume(self, ctx, vol : int=None):
         ''' Set the volume of the radio, any value between 0 and 100 '''
+        if ctx.message.author.voice_channel is None or ctx.message.author.bot:
+                await self.bot.say("You are not in the voice channel!")
+                return False
+        elif ctx.message.author.voice_channel != self.voice_channel:
+                await self.bot.say("You are not in the voice channel!")
+                return False
+
         if vol is None:
             await self.bot.say(f"Volume is {self.vol*100}%")
 
@@ -68,10 +75,21 @@ class Radio:
         try:
             if ctx.message.author.voice_channel is None or ctx.message.author.bot:
                 return False
+
+            if self.player is not None:
+                if self.player.is_playing():
+                    await self.bot.say("Bot is currently playing a song! Cannot move.")
+                    return False
             
             self.voice_channel = ctx.message.author.voice_channel
             if self.voice is None:
-                self.voice = await self.bot.join_voice_channel(self.voice_channel)
+                try:
+                    self.voice = await self.bot.join_voice_channel(self.voice_channel)
+                except Exception as e:
+                    self.voice = None
+                    self.voice_channel = None
+                    print(e)
+                    return False
             else:
                 await self.voice.move_to(self.voice_channel)
                 return False
