@@ -18,6 +18,7 @@ class Radio:
         self.voice_channel = None
         self.skip_count = 0
         self.voters = []
+        self.vol = self.config['volume']
         self.play_next_song = asyncio.Event()
         if playlist is not None:
             self.playlist = playlist
@@ -32,7 +33,6 @@ class Radio:
                 param = re.search("(\?|\&)([^=]+)\=([^&]+)", url)[0]
                 if 'list' not in param and param[3:] not in playlist:
                     param = param[3:]
-                    print(f"Appended video: {param}")
                     self.playlist.append(param)
                     with open(self.config['playlist_path'], "a+") as data:
                         data.write(param + '\n') 
@@ -42,6 +42,16 @@ class Radio:
 
     def toggle_next(self):
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def volume(self, ctx, vol : int):
+        ''' Set the volume of the radio, any value between 0 and 100 '''
+        if vol >= 0 and vol <= 100:
+            self.vol = vol * .01
+            if self.player is not None:
+                self.player.volume = self.vol
+                await self.bot.say(f"Set player volume to {vol}%")
+
 
     @commands.command(pass_context=True, no_pm=True)
     async def summon(self, ctx):
@@ -71,7 +81,7 @@ class Radio:
                     self.stack = []
                 self.player = await self.voice.create_ytdl_player(self.current_id, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
                 await bot.change_presence(game=discord.Game(name=self.player.title))
-                self.player.volume = self.config['volume']
+                self.player.volume = self.vol
                 self.player.start()
                 await self.play_next_song.wait()
         except:
@@ -87,11 +97,11 @@ class Radio:
             if ctx.message.author in self.voters:
                 await self.bot.say("You have already voted!")
                 return
+
             self.skip_count += 1
             self.voters.append(ctx.message.author)
-
             current_user_amount = len(self.voice_channel.voice_members)
-            required_to_skip = int((current_user_amount  + 1)* self.config['skip_percentage'])
+            required_to_skip = int(current_user_amount * self.config['skip_percentage'])
 
             await self.bot.say(f"{self.skip_count}/{required_to_skip} users have voted to skip!")
             if self.skip_count >= required_to_skip:
@@ -109,6 +119,7 @@ class Radio:
         """Retrieves the currently playing song, if any."""
         if self.current_id is not None:
             await self.bot.say(f"https://www.youtube.com/watch?v={self.current_id}")
+
 
 # Initalize
 with open('config.json', 'r') as f:
