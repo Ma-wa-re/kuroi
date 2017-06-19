@@ -1,9 +1,10 @@
 import re
 import discord
 import json
-from discord.ext import commands
-from random import choice, shuffle
 import asyncio
+from random import choice, shuffle
+from urllib.parse import urlparse
+from discord.ext import commands
 
 if not discord.opus.is_loaded():
     discord.opus.load_opus('opus')
@@ -27,14 +28,14 @@ class Radio:
         self.stack = []
 
     async def on_message(self, message):
-        if 'youtube' in message.content and message.channel.id == self.config["music_channel"]:
+        if 'youtube' in message.content and message.channel.id == self.config["music_channel"] and not message.author.bot:
             try:
                 url = re.search("(?P<url>https?://[^\s]+)", message.content).group("url")
-                param = re.search("(\?|\&)([^=]+)\=([^&]+)", url)[0]
-                if 'list' not in param and param[3:] not in playlist:
-                    param = param[3:]
-                    self.playlist.append(param)
-                    with open(self.config['playlist_path'], "a+") as data:
+                param = urlparse(url).query
+                if 'list' not in param and param[2:] not in playlist:
+                    print(f"Appended video id: {param[2:]}")
+                    self.playlist.append(param[2:])
+                    with open(self.config['playlist_path'], "a") as data:
                         data.write(param + '\n') 
             except Exception as e:
                 print(e)
@@ -59,11 +60,11 @@ class Radio:
         Summons the bot to your current voice channel
         '''
         try:
-            if ctx.message.author.voice_channel is None:
+            if ctx.message.author.voice_channel == None or ctx.message.author.bot == True:
                 return False
             
             self.voice_channel = ctx.message.author.voice_channel
-            if self.voice is None:
+            if self.voice == None:
                 self.voice = await bot.join_voice_channel(self.voice_channel)
             else:
                 await self.voice.move_to(self.voice_channel)
@@ -94,15 +95,20 @@ class Radio:
             if ctx.message.author not in self.voice_channel.voice_members:
                 await self.bot.say("You are not in the voice channel!")
                 return
-            if ctx.message.author in self.voters:
+            elif ctx.message.author in self.voters:
                 await self.bot.say("You have already voted!")
                 return
-
+            elif ctx.message.author.bot:
+                return
+            bots_in_channel = 0
             self.skip_count += 1
             self.voters.append(ctx.message.author)
-            current_user_amount = len(self.voice_channel.voice_members)
-            required_to_skip = int(current_user_amount * self.config['skip_percentage'])
-
+            for user in self.voice_channel.voice_members:
+                if user.bot:
+                    bots_in_channel += 1
+            current_user_amount = len(self.voice_channel.voice_members) - bots_in_channel
+            required_to_skip = int(current_user_amount+1 * self.config['skip_percentage'])
+            
             await self.bot.say(f"{self.skip_count}/{required_to_skip} users have voted to skip!")
             if self.skip_count >= required_to_skip:
                 await self.bot.say("Skipping song!")
