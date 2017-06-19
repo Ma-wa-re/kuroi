@@ -2,7 +2,7 @@ import re
 import discord
 import json
 import asyncio
-from random import choice, shuffle
+from random import shuffle
 from urllib.parse import urlparse
 from discord.ext import commands
 
