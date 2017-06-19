@@ -37,7 +37,7 @@ class Radio:
                 param = urlparse(url).query
                 if param[0:2] != "v=":
                     param = "".join(("v=", param.split("v=")[1]))
-                if 'list' not in param and param[2:] not in playlist:
+                if 'list' not in param and param[2:] not in self.playlist and param[2:] not in self.stack:
                     self.playlist.append(param[2:])
                     with open(self.config['playlist_path'], "a") as data:
                         data.write(param + '\n') 
