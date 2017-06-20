@@ -162,7 +162,7 @@ class Radio:
                  self.current_id = self.current_id[2:]
 
             title = self.player.title
-            url = self.player.url
+            url = f"https://www.youtube.com/watch?v={self.current_id}"
             mins, seconds = divmod(self.player.duration, 60)
             desc = f"[{title}]({url})\nDuration: {mins}:{seconds}\nViews: {self.player.views}\nUploader: {self.player.uploader}"
             em = discord.Embed(type="rich", description=desc)
