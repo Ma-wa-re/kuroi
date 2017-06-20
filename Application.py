@@ -164,7 +164,7 @@ class Radio:
             title = self.player.title
             url = self.player.url
             mins, seconds = divmod(self.player.duration, 60)
-            desc = f"Duration: {mins}:{seconds}\nViews: {self.player.views}\nUploader: {self.player.uploader}"
+            desc = f"[{title}]({url})\nDuration: {mins}:{seconds}\nViews: {self.player.views}\nUploader: {self.player.uploader}"
             em = discord.Embed(type="rich", description=desc)
             em.set_thumbnail(url=f"https://img.youtube.com/vi/{self.current_id}/0.jpg")
             await self.bot.send_message(ctx.message.channel, embed=em)
