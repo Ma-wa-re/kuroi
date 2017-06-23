@@ -3,20 +3,16 @@ import asyncio
 import discord
 from discord.ext import commands
 
-
 import re
 import urllib.parse as urlparse
 from collections import deque
 from random import shuffle
 
-
-import youtube_dl
-
 class Radio:
-    '''
+    """
     Radio cog for Discord.py Rewrite.
     Plays music from a #music channel or songs queued by the users.
-    '''
+    """
     def __init__(self, bot, config):
         self.bot = bot
         self.config = config["radio"]
@@ -59,10 +55,11 @@ class Radio:
     def process_links(self, content):
         urls = re.findall(r"(https?://\S+)", content)
         for url in urls:
-            parsed = urlparse.urlparse(url)
-            params = urlparse.parse_qs(parsed.query)
-            if 'v' in params:
-                self.add_video(params['v'][0])
+            if "youtube" in url:
+                parsed = urlparse.urlparse(url)
+                params = urlparse.parse_qs(parsed.query)
+                if "v" in params:
+                    self.add_video(params["v"][0])
 
     def add_video(self, video_id):
         print(f"[Add Video] {video_id}")
@@ -90,6 +87,7 @@ class Radio:
 
     @commands.command(pass_context=True, no_pm=True)
     async def summon(self, ctx):
+        """Summons the bot to your voice channel."""
         if ctx.message.author.voice_channel is None:
             return
 
@@ -114,33 +112,62 @@ class Radio:
             
             self.player = await self.voice.create_ytdl_player(url, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
             await self.set_status(self.player.title)
+            self.player.volume = self.config["volume"]
             self.player.start()
             await self.play_next_song.wait()
 
         await self.voice.disconnect()
-
         await self.set_status()
         self.player = None
         self.video_id = None
         self.voice = None
     
     @commands.command(pass_context=True, no_pm=True)
-    async def playing(self, ctx):
-        """Retrieves the currently playing song, if any."""
+    async def now(self, ctx):
+        """Displays currently playing video."""
         if self.video_id is not None and self.player is not None:
             title = self.player.title
             url = self.player.url
             mins, seconds = divmod(self.player.duration, 60)
-            desc = (f'Duration: {mins}:{seconds:02d}\n'
-                    f'Views: {self.player.views}\n'
-                    f'Uploader: {self.player.uploader}')
-            embed = discord.Embed(type='rich', title=title, url=url, description=desc)
-            embed.set_thumbnail(url=f'https://img.youtube.com/vi/{self.video_id}/0.jpg')
+            desc = (f"Duration: {mins}:{seconds:02d}\n"
+                    f"Views: {self.player.views}\n"
+                    f"Uploader: {self.player.uploader}")
+            embed = discord.Embed(type="rich", title=title, url=url, description=desc)
+            embed.set_thumbnail(url=f"https://img.youtube.com/vi/{self.video_id}/0.jpg")
             await self.bot.say(embed=embed)
 
     @commands.command(pass_context=True, no_pm=True)
     async def add(self, ctx):
+        """Add YouTube video to queue by URL."""
         # process_links will still be called even if this is the
         # music channel, this just prevents duplication of videos.
         if ctx.message.channel.id != self.config["music_channel"]:
             self.process_links(ctx.message.content)
+
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def skip(self, ctx):
+        """Skips the currently playing video."""
+        if self.player is not None:
+            self.player.stop()
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def pause(self, ctx):
+        """Pauses the currently playing video"""
+        if self.player is not None:
+            self.player.pause()
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def resume(self, ctx):
+        """Unpauses the currently playing video"""
+        if self.player is not None:
+            self.player.resume()
+    
+    @commands.command(pass_context=True, no_pm=True)
+    async def volume(self, ctx, vol:int):
+        """Sets the volume of the player between 0 and 100"""
+        if vol > 0 and vol <= 100:
+            vol = vol * .01
+            if self.player is not None:
+                self.config["volume"] = vol
+                self.player.volume = vol
