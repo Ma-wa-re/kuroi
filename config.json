@@ -1,10 +1,11 @@
 {
-    "token": "TOK",
+    "token": "Bot Token",
     "command_prefix": "%",
-    "description": "A radio bot designed to play music for the Programming Discord.",
+    "description": "A radio bot designed to play music for the Programming Discord.\nAll songs by default are added from the #music channel.\nDirect all bugs to Nullable#2729.",
     "radio": {
-        "music_channel": "280778849615216640",
+        "music_channel": 280778849615216640,
         "playlist_file": "playlist.txt",
+        "volume": 0.3,
         "status": "%help",
         "shuffle": true
     }

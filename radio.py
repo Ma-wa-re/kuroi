@@ -98,8 +98,8 @@ class Radio:
         """Summons the bot to your voice channel."""
         if ctx.message.author.voice is None:
             return
-        else:
-            voice_channel = ctx.message.author.voice.channel
+        
+        voice_channel = ctx.message.author.voice.channel
 
         if self.voice is None:
             self.voice = await voice_channel.connect()
@@ -107,7 +107,7 @@ class Radio:
             await self.voice.move_to(ctx.message.author.voice.channel)
             return
 
-        while True:
+        while len(voice_channel.members) > 1:
             self.play_next_song.clear()
 
             self.video_id = self.retrieve_next_video()
@@ -122,7 +122,8 @@ class Radio:
             self.info = await self.bot.loop.run_in_executor(None, func)
             download_url = self.info["formats"][0]["url"]
             
-            self.voice.play(discord.FFmpegPCMAudio(download_url), after=self.toggle_next)
+            before_args = "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"
+            self.voice.play(discord.FFmpegPCMAudio(download_url, before_options=before_args), after=self.toggle_next)
             # Change the volume of the audio
             self.voice.source = discord.PCMVolumeTransformer(self.voice.source, volume=self.config["volume"])
 
@@ -140,7 +141,7 @@ class Radio:
         """Displays currently playing video."""
         if self.video_id is not None and self.voice is not None and self.info is not None:
             title = self.info["title"]
-            url = self.info["url"]
+            url = self.info["webpage_url"]
             view_count = self.info["view_count"]
             uploader = self.info["uploader"]
             mins, seconds = divmod(self.info["duration"], 60)
@@ -148,7 +149,7 @@ class Radio:
                     f"Views: {view_count}\n"
                     f"Uploader: {uploader}")
             embed = discord.Embed(type="rich", title=title, url=url, description=desc)
-            embed.set_thumbnail(url=f"https://img.youtube.com/vi/{self.video_id}/0.jpg")
+            embed.set_thumbnail(url=self.info["thumbnail"])
             await ctx.send(embed=embed)
 
     @commands.command(pass_context=True, no_pm=True)
