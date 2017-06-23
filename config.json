@@ -1,9 +1,11 @@
 {
-    "token": "bot tok",
-    "description": "Music bot for the Programming Discord",
-    "prefix": "%",
-    "skip_percentage": 0.75,
-    "volume": 0.5,
-    "playlist_path": "playlist.txt",
-    "music_channel": "280778849615216640"
+    "token": "TOK",
+    "command_prefix": "%",
+    "description": "A radio bot designed to play music for the Programming Discord.",
+    "radio": {
+        "music_channel": "280778849615216640",
+        "playlist_file": "playlist.txt",
+        "status": "%help",
+        "shuffle": true
+    }
 }
