@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 import asyncio
 import discord
 from discord.ext import commands
@@ -47,27 +46,28 @@ class Radio:
 
     async def on_message(self, message):
         if not message.author.bot and message.channel.id == self.config["music_channel"]:
-            self.process_links(message.content)
+            self.process_links(message.content, queue=False)
 
     def toggle_next(self):
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
-    def process_links(self, content):
+    def process_links(self, content, queue=False):
         urls = re.findall(r"(https?://\S+)", content)
         for url in urls:
             if "youtube" in url:
                 parsed = urlparse.urlparse(url)
                 params = urlparse.parse_qs(parsed.query)
                 if "v" in params:
-                    self.add_video(params["v"][0])
+                    self.add_video(params["v"][0], queue=queue)
 
-    def add_video(self, video_id):
+    def add_video(self, video_id, queue=False):
         print(f"[Add Video] {video_id}")
         if video_id not in self.playlist:
             self.playlist.appendleft(video_id)
             with open(self.config["playlist_file"], "a") as data:
                 data.write(video_id + "\n")
-        self.queue.appendleft(video_id)
+        if video_id not in self.queue and queue:
+            self.queue.appendleft(video_id)
 
     def retrieve_next_video(self):
         video_id = None
@@ -142,8 +142,7 @@ class Radio:
         # process_links will still be called even if this is the
         # music channel, this just prevents duplication of videos.
         if ctx.message.channel.id != self.config["music_channel"]:
-            self.process_links(ctx.message.content)
-
+            self.process_links(ctx.message.content, queue=True)
 
     @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
