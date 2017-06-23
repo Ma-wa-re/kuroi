@@ -1,8 +1,11 @@
+from __future__ import unicode_literals
 import asyncio
 import discord
 from discord.ext import commands
+import youtube_dl
 
 import re
+import functools
 import urllib.parse as urlparse
 from collections import deque
 from random import shuffle
@@ -18,10 +21,15 @@ class Radio:
 
         self.queue = deque()
 
-        self.player = None
         self.video_id = None
         self.voice = None
         self.play_next_song = asyncio.Event()
+        self.info = None
+
+        self.ydl_opts = {
+            "format": "opus[abr>0]/bestaudio/best",
+            "prefer_ffmpeg": True
+        }
 
         try:
             with open(self.config["playlist_file"], "r") as playlist:
@@ -48,7 +56,7 @@ class Radio:
         if not message.author.bot and message.channel.id == self.config["music_channel"]:
             self.process_links(message.content, queue=False)
 
-    def toggle_next(self):
+    def toggle_next(self, error):
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
     def process_links(self, content, queue=False):
@@ -88,53 +96,60 @@ class Radio:
     @commands.command(pass_context=True, no_pm=True)
     async def summon(self, ctx):
         """Summons the bot to your voice channel."""
-        if ctx.message.author.voice_channel is None:
+        if ctx.message.author.voice is None:
             return
-
-        if self.player is not None:
-            if self.player.is_playing():
-                return
-
-        voice_channel = ctx.message.author.voice_channel
+        else:
+            voice_channel = ctx.message.author.voice.channel
 
         if self.voice is None:
-            self.voice = await self.bot.join_voice_channel(voice_channel)
+            self.voice = await voice_channel.connect()
+        else:
+            await self.voice.move_to(ctx.message.author.voice.channel)
+            return
 
-        while len(voice_channel.voice_members) > 1:
+        while True:
             self.play_next_song.clear()
 
             self.video_id = self.retrieve_next_video()
+            url = f"https://www.youtube.com/watch?v={self.video_id}"
 
             if self.video_id is None:
                 break
-
-            url = f"https://www.youtube.com/watch?v={self.video_id}"
             
-            self.player = await self.voice.create_ytdl_player(url, after=self.toggle_next, before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5")
-            await self.set_status(self.player.title)
-            self.player.volume = self.config["volume"]
-            self.player.start()
+            ydl = youtube_dl.YoutubeDL(self.ydl_opts)
+            func = functools.partial(ydl.extract_info, url, download=False)
+
+            self.info = await self.bot.loop.run_in_executor(None, func)
+            download_url = self.info["formats"][0]["url"]
+            
+            self.voice.play(discord.FFmpegPCMAudio(download_url), after=self.toggle_next)
+            # Change the volume of the audio
+            self.voice.source = discord.PCMVolumeTransformer(self.voice.source, volume=self.config["volume"])
+
+            await self.set_status(self.info["title"])
             await self.play_next_song.wait()
 
         await self.voice.disconnect()
         await self.set_status()
-        self.player = None
+        self.voice = None
         self.video_id = None
         self.voice = None
     
     @commands.command(pass_context=True, no_pm=True)
     async def now(self, ctx):
         """Displays currently playing video."""
-        if self.video_id is not None and self.player is not None:
-            title = self.player.title
-            url = self.player.url
-            mins, seconds = divmod(self.player.duration, 60)
+        if self.video_id is not None and self.voice is not None and self.info is not None:
+            title = self.info["title"]
+            url = self.info["url"]
+            view_count = self.info["view_count"]
+            uploader = self.info["uploader"]
+            mins, seconds = divmod(self.info["duration"], 60)
             desc = (f"Duration: {mins}:{seconds:02d}\n"
-                    f"Views: {self.player.views}\n"
-                    f"Uploader: {self.player.uploader}")
+                    f"Views: {view_count}\n"
+                    f"Uploader: {uploader}")
             embed = discord.Embed(type="rich", title=title, url=url, description=desc)
             embed.set_thumbnail(url=f"https://img.youtube.com/vi/{self.video_id}/0.jpg")
-            await self.bot.say(embed=embed)
+            await ctx.send(embed=embed)
 
     @commands.command(pass_context=True, no_pm=True)
     async def add(self, ctx):
@@ -147,26 +162,26 @@ class Radio:
     @commands.command(pass_context=True, no_pm=True)
     async def skip(self, ctx):
         """Skips the currently playing video."""
-        if self.player is not None:
-            self.player.stop()
+        if self.voice is not None:
+            self.voice.stop()
 
     @commands.command(pass_context=True, no_pm=True)
     async def pause(self, ctx):
         """Pauses the currently playing video"""
-        if self.player is not None:
-            self.player.pause()
+        if self.voice is not None:
+            self.voice.pause()
 
     @commands.command(pass_context=True, no_pm=True)
     async def resume(self, ctx):
         """Unpauses the currently playing video"""
-        if self.player is not None:
-            self.player.resume()
+        if self.voice is not None:
+            self.voice.resume()
     
     @commands.command(pass_context=True, no_pm=True)
     async def volume(self, ctx, vol:int):
         """Sets the volume of the player between 0 and 100"""
         if vol > 0 and vol <= 100:
             vol = vol * .01
-            if self.player is not None:
+            if self.voice is not None:
                 self.config["volume"] = vol
-                self.player.volume = vol
+                self.voice.source.volume = vol
