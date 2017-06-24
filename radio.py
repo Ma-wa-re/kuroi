@@ -54,19 +54,40 @@ class Radio:
 
     async def on_message(self, message):
         if not message.author.bot and message.channel.id == self.config["music_channel"]:
-            self.process_links(message.content, queue=False)
+            await self.process_links(message.content, queue=False)
 
     def toggle_next(self, error):
         self.bot.loop.call_soon_threadsafe(self.play_next_song.set)
 
-    def process_links(self, content, queue=False):
+    async def youtube_dl_process(self, url):
+        ''' Uses youtube-dl to process the link and return 1 url '''
+
+        opts = {"noplaylist": True, "playlistend": 1, 'ignoreerrors': True}
+
+        ydl = youtube_dl.YoutubeDL(opts)
+        func = functools.partial(ydl.extract_info, url, download=False)
+        info = await self.bot.loop.run_in_executor(None, func)
+        if "entries" in info:
+            info = info['entries'][0]
+
+        return info
+
+    async def process_links(self, content, queue=False):
         urls = re.findall(r"(https?://\S+)", content)
         for url in urls:
             if "youtube" in url:
-                parsed = urlparse.urlparse(url)
-                params = urlparse.parse_qs(parsed.query)
-                if "v" in params:
-                    self.add_video(params["v"][0], queue=queue)
+                info = await self.youtube_dl_process(url)
+
+                if info:
+                    parsed = urlparse.urlparse(info["webpage_url"])
+                    params = urlparse.parse_qs(parsed.query)
+                    if "v" in params:
+                        self.add_video(params["v"][0], queue=queue)
+            elif "soundcloud" in url:
+                info = await self.youtube_dl_process(url)
+
+                if info:
+                    self.add_video(info["webpage_url"], queue=queue)
 
     def add_video(self, video_id, queue=False):
         print(f"[Add Video] {video_id}")
@@ -111,7 +132,10 @@ class Radio:
             self.play_next_song.clear()
 
             self.video_id = self.retrieve_next_video()
-            url = f"https://www.youtube.com/watch?v={self.video_id}"
+            if "soundcloud" in self.video_id:
+                url = self.video_id
+            else:
+                url = f"https://www.youtube.com/watch?v={self.video_id}"
 
             if self.video_id is None:
                 break
@@ -142,12 +166,16 @@ class Radio:
         if self.video_id is not None and self.voice is not None and self.info is not None:
             title = self.info["title"]
             url = self.info["webpage_url"]
-            view_count = self.info["view_count"]
             uploader = self.info["uploader"]
             mins, seconds = divmod(self.info["duration"], 60)
-            desc = (f"Duration: {mins}:{seconds:02d}\n"
-                    f"Views: {view_count}\n"
-                    f"Uploader: {uploader}")
+            if "soundcloud" in url:
+                desc = (f"Duration: {mins}:{seconds:02d}\n"
+                        f"Uploader: {uploader}")
+            else:
+                view_count = self.info["view_count"]
+                desc = (f"Duration: {mins}:{seconds:02d}\n"
+                        f"Views: {view_count}\n"
+                        f"Uploader: {uploader}")
             embed = discord.Embed(type="rich", title=title, url=url, description=desc)
             embed.set_thumbnail(url=self.info["thumbnail"])
             await ctx.send(embed=embed)
